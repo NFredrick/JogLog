@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">JogLog</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="start_collection">Start</string>
+    <string name="stop_collection">Stop</string>
+    <string name="distance_units"> mi</string>
+    <string name="time">Time</string>
+    <string name="view_map">View Map</string>
+</resources>
