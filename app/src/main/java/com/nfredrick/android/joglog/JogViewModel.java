@@ -1,59 +1,71 @@
 package com.nfredrick.android.joglog;
 
-import android.arch.lifecycle.LiveData;
-import android.arch.lifecycle.MutableLiveData;
-import android.arch.lifecycle.ViewModel;
+
 import android.location.Location;
 
+import com.nfredrick.android.joglog.db.JogData;
+
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.List;
+
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.Transformations;
+import androidx.lifecycle.ViewModel;
+
 
 public class JogViewModel extends ViewModel {
 
-    private Jog mJog;
-    private MutableLiveData<Double> mDistance = new MutableLiveData<>();
+    private Repository sRepository;
+    private LiveData<Double> mDistance;
+    private LiveData<Long> mElapsedTime;
+    private LiveData<List<JogData>> mJogData;
+    private static final double METERS_TO_MILES = 0.000621371;
 
-    private Timer mTimer;
-    private TimerTask mTask;
-    private MutableLiveData<Integer> mElapsedTime = new MutableLiveData<>();
-    private final int mIncrement = 1;
+    public JogViewModel() {
+        sRepository = Repository.getInstance();
+        mJogData = sRepository.getJogData();
+        mDistance = Transformations.map(mJogData, mJogData -> {
+            double distance = 0;
+            for (int i = 1; i < mJogData.size(); i++) {
+                float[] res = new float[10];
+                Location.distanceBetween(
+                        mJogData.get(i-1).latitude,
+                        mJogData.get(i-1).longitude,
+                        mJogData.get(i).latitude,
+                        mJogData.get(i).longitude,
+                        res);
+                distance += res[0]*METERS_TO_MILES;
+            }
+            return distance;
+        });
+        mElapsedTime = Transformations.map(mJogData, mJogData -> {
+            long time = 0;
+            if (mJogData.size() == 0) {
+                return time;
+            }
+            time = mJogData.get(mJogData.size()-1).time - mJogData.get(0).time;
+            return time/1000;
+        });
+    }
+
+    public LiveData<List<JogData>> getJogData() {
+        return mJogData;
+    }
+
+    public void startJog() {
+        sRepository.startJog(1);
+    }
+
+    public void stopJog() {
+        sRepository.stopJog(1);
+    }
 
     public LiveData<Double> getDistance() {
         return mDistance;
     }
 
-    public LiveData<Integer> getElapsedTime() {
+    public LiveData<Long> getElapsedTime() {
         return mElapsedTime;
     }
 
-    public void setup() {
-        mElapsedTime.setValue(0);
-        mDistance.setValue(0.0);
-        mJog = new Jog();
-        mTimer = new Timer();
-        mTask = new TimerTask() {
-            @Override
-            public void run() {
-                mElapsedTime.postValue(mElapsedTime.getValue() + mIncrement);
-            }
-        };
-    }
-
-    public void startJog() {
-        mTimer.schedule(mTask, mIncrement*1000, mIncrement*1000);
-    }
-
-    public void stopJog() {
-        mTimer.cancel();
-    }
-
-    public void addLocation(Location location) {
-        mJog.addLocation(location);
-        mDistance.postValue(mJog.distanceInMiles());
-    }
-
-    public ArrayList<Location> getJogLocationData() {
-        return mJog.getLocationData();
-    }
 }

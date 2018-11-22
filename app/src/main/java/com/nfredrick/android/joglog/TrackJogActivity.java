@@ -1,34 +1,30 @@
 package com.nfredrick.android.joglog;
 
 import android.Manifest;
-import android.arch.lifecycle.Observer;
-import android.arch.lifecycle.ViewModelProviders;
+
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
-import android.os.PowerManager;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
+
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
+import com.nfredrick.android.joglog.db.JogData;
 
+import java.util.ArrayList;
 
-public class TrackJogActivity extends AppCompatActivity{
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 
+public class TrackJogActivity extends AppCompatActivity {
 
-    private static final int MY_PERMISSIONS_LOCATION_REQUEST_CODE = 4321;
     private static final String TAG = "TrackJogFragment";
-    private static final String WAKE_LOCK_TAG = "JogLog::WakeLockTag";
+    private static final int MY_PERMISSIONS_LOCATION_REQUEST_CODE = 4321;
 
     private static final String[] LOCATION_PERMISSIONS = new String[]{
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -41,14 +37,7 @@ public class TrackJogActivity extends AppCompatActivity{
     private Button mMapButton;
     private Button mStopButton;
 
-    private GoogleApiClient mGoogleApiClient;
-    private FusedLocationProviderClient mFusedLocationProviderClient;
-    private LocationRequest mLocationRequest;
-    private LocationCallback mLocationCallback;
-
     private JogViewModel mJogViewModel;
-
-    private PowerManager.WakeLock mWakeLock;
 
     private boolean mIsRunning;
     private static final String IS_RUNNING = "mIsRunning";
@@ -60,9 +49,9 @@ public class TrackJogActivity extends AppCompatActivity{
         }
     };
 
-    private final Observer<Integer> mElapsedTimeObserver = new Observer<Integer>() {
+    private final Observer<Long> mElapsedTimeObserver = new Observer<Long>() {
         @Override
-        public void onChanged(Integer newElapsedTime) {
+        public void onChanged(Long newElapsedTime) {
             mElapsedTimeView.setText(formatTime(newElapsedTime));
         }
     };
@@ -71,6 +60,14 @@ public class TrackJogActivity extends AppCompatActivity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "Did not yet have location permissions");
+            ActivityCompat.requestPermissions(this, LOCATION_PERMISSIONS, MY_PERMISSIONS_LOCATION_REQUEST_CODE);
+        }
+
         if (savedInstanceState != null) {
             mIsRunning = savedInstanceState.getBoolean(IS_RUNNING, false);
         } else {
@@ -78,31 +75,11 @@ public class TrackJogActivity extends AppCompatActivity{
         }
 
         mJogViewModel = ViewModelProviders.of(this).get(JogViewModel.class);
-        if (!mIsRunning) {
-            mJogViewModel.setup();
-            acquireWakeLock();
-        }
 
         subscribeDistanceObserver();
         subscribeElapsedTimeObserver();
 
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addApi(LocationServices.API)
-                .build();
 
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
-        mLocationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if (locationResult == null) {
-                    return;
-                }
-                for (Location location : locationResult.getLocations()) {
-                    mJogViewModel.addLocation(location);
-                }
-            }
-        };
 
         setContentView(R.layout.fragment_track_jog);
 
@@ -115,7 +92,6 @@ public class TrackJogActivity extends AppCompatActivity{
         mCollectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                collectJogData();
                 mJogViewModel.startJog();
                 mIsRunning = true;
                 mCollectButton.setVisibility(View.GONE);
@@ -127,9 +103,8 @@ public class TrackJogActivity extends AppCompatActivity{
         mStopButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
+
                 mJogViewModel.stopJog();
-                mWakeLock.release();
                 mMapButton.setVisibility(View.VISIBLE);
             }
         });
@@ -143,10 +118,12 @@ public class TrackJogActivity extends AppCompatActivity{
         mMapButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = JogMapActivty.newIntent(TrackJogActivity.this, mJogViewModel.getJogLocationData());
+                ArrayList<JogData> data = (ArrayList<JogData>) mJogViewModel.getJogData().getValue();
+                Intent intent = JogMapActivity.newIntent(TrackJogActivity.this, data);
                 startActivity(intent);
             }
         });
+
     }
 
     @Override
@@ -163,70 +140,10 @@ public class TrackJogActivity extends AppCompatActivity{
         mJogViewModel.getElapsedTime().observe(this, mElapsedTimeObserver);
     }
 
-    public String formatTime(int time) {
-        int hours = time / 3600;
-        int minutes = time % 3600 / 60;
-        int seconds = time - hours * 3600 - minutes * 60;
+    public String formatTime(long time) {
+        int hours = (int) time / 3600;
+        int minutes = (int) time % 3600 / 60;
+        int seconds = (int) time - hours * 3600 - minutes * 60;
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-
-        mGoogleApiClient.connect();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        mGoogleApiClient.disconnect();
-    }
-
-    private void collectJogData() {
-        Log.d(TAG, "entered collectJogData()");
-        createLocationRequest();
-        startLocationUpdates();
-    }
-
-    //
-    private void createLocationRequest() {
-        int sampleInterval = 1000 * 1; // in milliseconds
-        LocationRequest request = LocationRequest.create()
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(sampleInterval);
-        mLocationRequest = request;
-    }
-
-    private void startLocationUpdates() {
-        Log.d(TAG, "entered startLocationUpdates");
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            // permission has not yet been granted
-            requestPermissions(LOCATION_PERMISSIONS,
-                    MY_PERMISSIONS_LOCATION_REQUEST_CODE);
-        }
-
-        if (hasLocationPermission()) {
-            Log.d(TAG, "has location permission");
-            mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest,
-                    mLocationCallback,
-                    null);
-        } else {
-            Log.d(TAG, "no location permission");
-        }
-    }
-
-    private boolean hasLocationPermission() {
-        int result = ContextCompat
-                .checkSelfPermission(this, LOCATION_PERMISSIONS[0]);
-        return result == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void acquireWakeLock() {
-        PowerManager powerManager = (PowerManager) this.getSystemService(POWER_SERVICE);
-        mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG);
-        mWakeLock.acquire();
     }
 }

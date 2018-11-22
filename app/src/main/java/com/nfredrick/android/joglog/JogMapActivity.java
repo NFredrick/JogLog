@@ -1,28 +1,32 @@
 package com.nfredrick.android.joglog;
 
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.nfredrick.android.joglog.db.JogData;
 
 import java.util.ArrayList;
+import androidx.fragment.app.FragmentActivity;
 
-public class JogMapActivty extends FragmentActivity implements OnMapReadyCallback{
+
+public class JogMapActivity extends FragmentActivity implements OnMapReadyCallback{
 
     private GoogleMap mGoogleMap;
-    private SupportMapFragment mSupportMapFragment;
+    private MapFragment mMapFragment;
 
-    private ArrayList<Location> mLocations;
+    private ArrayList<JogData> mLocations;
 
     private static final String DATA_KEY = "LOCATION_LIST_DATA";
     private static final String TAG = "JogMapActivity";
@@ -31,11 +35,14 @@ public class JogMapActivty extends FragmentActivity implements OnMapReadyCallbac
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_jog_map);
-        mLocations = (ArrayList<Location>)getIntent().getExtras().get(DATA_KEY);
+        mLocations = (ArrayList<JogData>)getIntent().getExtras().get(DATA_KEY);
 
-        mSupportMapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mSupportMapFragment.getMapAsync(this);
+        mMapFragment = MapFragment.newInstance();
+        FragmentTransaction fragmentTransaction =
+                getFragmentManager().beginTransaction();
+        fragmentTransaction.add(R.id.map, mMapFragment);
+        fragmentTransaction.commit();
+        mMapFragment.getMapAsync(this);
     }
 
     @Override
@@ -51,11 +58,13 @@ public class JogMapActivty extends FragmentActivity implements OnMapReadyCallbac
         double minLongitude = 180.0;
 
         PolylineOptions dataPoints = new PolylineOptions();
-        for (Location loc : mLocations) {
+        for (JogData loc : mLocations) {
 
-            dataPoints.add(new LatLng(loc.getLatitude(), loc.getLongitude()));
-            double lat = loc.getLatitude();
-            double lon = loc.getLongitude();
+            double lat = loc.latitude;
+            double lon = loc.longitude;
+            Log.d(TAG, "Adding data point "+ Double.toString(lat) + ", " + Double.toString(lon));
+            dataPoints.add(new LatLng(lat, lon));
+
             if (lat > maxLatitude) {
                 maxLatitude = lat;
             }
@@ -77,8 +86,8 @@ public class JogMapActivty extends FragmentActivity implements OnMapReadyCallbac
         mGoogleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 0));
     }
 
-    public static Intent newIntent(Context packageContext, ArrayList<Location> data) {
-        Intent intent = new Intent(packageContext, JogMapActivty.class);
+    public static Intent newIntent(Context packageContext, ArrayList<JogData> data) {
+        Intent intent = new Intent(packageContext, JogMapActivity.class);
         intent.putExtra(DATA_KEY, data);
         return intent;
     }
