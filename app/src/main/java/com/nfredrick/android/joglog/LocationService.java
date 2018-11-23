@@ -1,6 +1,9 @@
 package com.nfredrick.android.joglog;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -28,6 +32,10 @@ public class LocationService extends Service {
     private LocationRequest mLocationRequest;
     private LocationCallback mLocationCallback;
 
+    private NotificationManager mNotificationManager;
+    private NotificationChannel mNotificationChannel;
+    private PowerManager.WakeLock mWakeLock;
+
     private JogDatabase mJogDatabase;
     private int mJogId;
 
@@ -37,19 +45,25 @@ public class LocationService extends Service {
     };
 
     private static final String TAG = "LocationService";
+    private static final String WAKE_LOCK_TAG = "JogLog::WakeLockTag";
     private static final String JOG_ID_KEY = "jog id key";
+    private static final String NOTIFICATION_TITLE = "Notification title";
+    private static final String NOTIFICATION_ID = "Notification id";
 
     @Override
     public void onCreate() {
         Log.d(TAG, "LocationService onCreate()");
+        // Load database
         mJogDatabase = JogDatabase.getDatabase(JogApplication.getContext());
-        mJogDatabase.jogLocationsDao().clearTable();
+        mJogDatabase.jogLocationsDao().clearTable();  // currently clearing for testing
 
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
                 .build();
 
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
+        // start location callbacks
         mLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
@@ -63,6 +77,31 @@ public class LocationService extends Service {
                 }
             }
         };
+
+        // start foreground service
+        if (mNotificationManager == null) {
+            mNotificationManager = (NotificationManager) this.getSystemService(NOTIFICATION_SERVICE);
+        }
+
+        mNotificationChannel = mNotificationManager.getNotificationChannel(NOTIFICATION_ID);
+
+        if (mNotificationChannel == null) {
+            mNotificationChannel = new NotificationChannel(
+                    NOTIFICATION_ID, NOTIFICATION_TITLE, NotificationManager.IMPORTANCE_HIGH);
+            mNotificationManager.createNotificationChannel(mNotificationChannel);
+        }
+
+        Notification notification = new Notification.Builder(this, NOTIFICATION_ID)
+                .setContentTitle("SomeNotification")
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentText("jog log running")
+                .build();
+        startForeground(Notification.FLAG_FOREGROUND_SERVICE, notification);
+
+        // acquire a wakelock so callbacks can occur while phone is locked
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        mWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG);
+        mWakeLock.acquire();
     }
 
     @Override
@@ -92,8 +131,11 @@ public class LocationService extends Service {
 
     @Override
     public void onDestroy() {
+        Log.d(TAG, "onDestroy() called");
         mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
         mGoogleApiClient.disconnect();
+        mWakeLock.release();
+        stopForeground(true);
     }
 
     @Override

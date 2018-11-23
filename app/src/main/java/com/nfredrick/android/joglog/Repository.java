@@ -1,6 +1,6 @@
 package com.nfredrick.android.joglog;
 
-import android.app.Service;
+import android.content.ContextWrapper;
 
 import com.nfredrick.android.joglog.db.JogData;
 import com.nfredrick.android.joglog.db.JogDatabase;
@@ -39,7 +39,8 @@ public class Repository {
     }
 
     public void startJog(int jogId) {
-        JogApplication.getContext().startService(LocationService.newIntent(JogApplication.getContext(), jogId));
+        //JogApplication.getContext().startService(LocationService.newIntent(JogApplication.getContext(), jogId));
+        JogApplication.getContext().startForegroundService(LocationService.newIntent(JogApplication.getContext(), jogId));
     }
 
     public void stopJog(int jogId) {
