@@ -10,6 +10,7 @@ import android.widget.TextView;
 
 import com.nfredrick.android.joglog.R;
 import com.nfredrick.android.joglog.db.Jog;
+import com.nfredrick.android.joglog.jog.JogActivity;
 
 import java.util.List;
 
@@ -33,9 +34,9 @@ public class LogRecyclerViewAdapter extends RecyclerView.Adapter<LogRecyclerView
     public void onBindViewHolder(LogViewHolder holder, int position) {
         Log.d(TAG, "onBindViewHolder");
         Jog jog = mJogs.get(position);
-        holder.mDistanceTextView.setText(Double.toString(jog.distance));
-        holder.mTimeTextView.setText(Long.toString(jog.time));
-        holder.mDateTextView.setText(jog.date.toString());
+        holder.mDistanceTextView.setText(String.format("%.2f mi", jog.distance));
+        holder.mTimeTextView.setText(JogActivity.formatTime(jog.time));
+        holder.mDateTextView.setText(jog.date);
     }
 
     @Override

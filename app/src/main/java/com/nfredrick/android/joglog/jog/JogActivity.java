@@ -72,12 +72,11 @@ public class JogActivity extends AppCompatActivity {
         subscribeDistanceObserver();
         subscribeElapsedTimeObserver();
 
-        setContentView(R.layout.fragment_track_jog);
+        setContentView(R.layout.activity_jog);
 
         mElapsedTimeView = findViewById(R.id.elapsed_time);
 
         mDistanceView = findViewById(R.id.total_distance);
-        //mDistanceView.setText("0.00");
 
         mCollectButton = findViewById(R.id.collect_run_data_button);
         mCollectButton.setOnClickListener(new View.OnClickListener() {
@@ -125,7 +124,7 @@ public class JogActivity extends AppCompatActivity {
         mJogViewModel.getElapsedTime().observe(this, mElapsedTimeObserver);
     }
 
-    public String formatTime(long time) {
+    public static String formatTime(long time) {
         int hours = (int) time / 3600;
         int minutes = (int) time % 3600 / 60;
         int seconds = (int) time - hours * 3600 - minutes * 60;
