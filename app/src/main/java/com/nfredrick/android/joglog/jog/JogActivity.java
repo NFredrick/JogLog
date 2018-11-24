@@ -1,29 +1,23 @@
-package com.nfredrick.android.joglog;
+package com.nfredrick.android.joglog.jog;
 
 import android.Manifest;
-
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-
-import com.nfredrick.android.joglog.db.JogData;
-
-import java.util.ArrayList;
-
+import android.widget.Toast;
+import com.nfredrick.android.joglog.R;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
-public class TrackJogActivity extends AppCompatActivity {
+public class JogActivity extends AppCompatActivity {
 
-    private static final String TAG = "TrackJogFragment";
+    private static final String TAG = "com.nfredrick.android.joglog.jog.JogActivity";
     private static final int MY_PERMISSIONS_LOCATION_REQUEST_CODE = 4321;
 
     private static final String[] LOCATION_PERMISSIONS = new String[]{
@@ -34,7 +28,6 @@ public class TrackJogActivity extends AppCompatActivity {
     private TextView mElapsedTimeView;
     private TextView mDistanceView;
     private Button mCollectButton;
-    private Button mMapButton;
     private Button mStopButton;
 
     private JogViewModel mJogViewModel;
@@ -79,22 +72,22 @@ public class TrackJogActivity extends AppCompatActivity {
         subscribeDistanceObserver();
         subscribeElapsedTimeObserver();
 
-
-
         setContentView(R.layout.fragment_track_jog);
 
         mElapsedTimeView = findViewById(R.id.elapsed_time);
 
         mDistanceView = findViewById(R.id.total_distance);
-        mDistanceView.setText("0.00");
+        //mDistanceView.setText("0.00");
 
         mCollectButton = findViewById(R.id.collect_run_data_button);
         mCollectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mJogViewModel.startJog();
+                subscribeDistanceObserver();
+                subscribeElapsedTimeObserver();
                 mIsRunning = true;
-                mCollectButton.setVisibility(View.GONE);
+                mCollectButton.setVisibility(View.INVISIBLE);
                 mStopButton.setVisibility(View.VISIBLE);
             }
         });
@@ -105,7 +98,10 @@ public class TrackJogActivity extends AppCompatActivity {
             public void onClick(View v) {
 
                 mJogViewModel.stopJog();
-                mMapButton.setVisibility(View.VISIBLE);
+                mCollectButton.setVisibility(View.VISIBLE);
+                mStopButton.setVisibility(View.INVISIBLE);
+
+                Toast.makeText(JogActivity.this, "Jog Saved", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -113,17 +109,6 @@ public class TrackJogActivity extends AppCompatActivity {
             mCollectButton.setVisibility(View.GONE);
             mStopButton.setVisibility(View.VISIBLE);
         }
-
-        mMapButton = findViewById(R.id.view_map);
-        mMapButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ArrayList<JogData> data = (ArrayList<JogData>) mJogViewModel.getJogData().getValue();
-                Intent intent = JogMapActivity.newIntent(TrackJogActivity.this, data);
-                startActivity(intent);
-            }
-        });
-
     }
 
     @Override
@@ -146,4 +131,5 @@ public class TrackJogActivity extends AppCompatActivity {
         int seconds = (int) time - hours * 3600 - minutes * 60;
         return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
+
 }

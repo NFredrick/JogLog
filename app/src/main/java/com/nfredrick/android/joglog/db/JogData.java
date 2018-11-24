@@ -1,7 +1,5 @@
 package com.nfredrick.android.joglog.db;
 
-import android.location.Location;
-
 import java.io.Serializable;
 
 import androidx.room.ColumnInfo;

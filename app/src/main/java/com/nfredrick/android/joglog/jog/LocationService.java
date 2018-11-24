@@ -1,4 +1,4 @@
-package com.nfredrick.android.joglog;
+package com.nfredrick.android.joglog.jog;
 
 import android.Manifest;
 import android.app.Notification;
@@ -20,6 +20,8 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.nfredrick.android.joglog.JogApplication;
+import com.nfredrick.android.joglog.R;
 import com.nfredrick.android.joglog.db.JogData;
 import com.nfredrick.android.joglog.db.JogDatabase;
 
@@ -44,9 +46,9 @@ public class LocationService extends Service {
             Manifest.permission.ACCESS_COARSE_LOCATION,
     };
 
-    private static final String TAG = "LocationService";
+    private static final String TAG = "com.nfredrick.android.joglog.jog.LocationService";
     private static final String WAKE_LOCK_TAG = "JogLog::WakeLockTag";
-    private static final String JOG_ID_KEY = "jog id key";
+    public static final String JOG_ID_KEY = "jog id key";
     private static final String NOTIFICATION_TITLE = "Notification title";
     private static final String NOTIFICATION_ID = "Notification id";
 
@@ -55,7 +57,6 @@ public class LocationService extends Service {
         Log.d(TAG, "LocationService onCreate()");
         // Load database
         mJogDatabase = JogDatabase.getDatabase(JogApplication.getContext());
-        mJogDatabase.jogLocationsDao().clearTable();  // currently clearing for testing
 
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
@@ -92,9 +93,9 @@ public class LocationService extends Service {
         }
 
         Notification notification = new Notification.Builder(this, NOTIFICATION_ID)
-                .setContentTitle("SomeNotification")
+                .setContentTitle("Jog Log Jogging")
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentText("jog log running")
+                .setContentText("Jog is in progress")
                 .build();
         startForeground(Notification.FLAG_FOREGROUND_SERVICE, notification);
 
@@ -107,8 +108,8 @@ public class LocationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "LocationService onStartCommand()");
-        mJogId = intent.getIntExtra("JOG_ID_KEY", 0);
-
+        mJogId = Repository.getInstance().getJogId();
+        Log.d(TAG, "mJogId = " + Integer.toString(mJogId));
         // create location request
         int sampleInterval = 1000 * 1; // in milliseconds
         LocationRequest request = LocationRequest.create()
@@ -143,15 +144,8 @@ public class LocationService extends Service {
         return null;
     }
 
-    public static Intent newIntent(Context context, int jogId) {
+    public static Intent newIntent(Context context) {
         Intent intent = new Intent(context, LocationService.class);
-        Bundle extras = new Bundle();
-        if (intent == null)
-            Log.d(TAG, "intent is null");
-        if (extras == null)
-            Log.d(TAG, "extras is null");
-        extras.putInt(JOG_ID_KEY, jogId);
-        intent.putExtras(extras);
         return intent;
     }
 }

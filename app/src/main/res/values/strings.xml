@@ -6,4 +6,6 @@
     <string name="distance_units"> mi</string>
     <string name="time">Time</string>
     <string name="view_map">View Map</string>
+    <string name="jog_button_name">Jog</string>
+    <string name="log_button_name">Log</string>
 </resources>

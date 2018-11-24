@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 
 import com.nfredrick.android.joglog.db.JogDatabase;
+import com.nfredrick.android.joglog.jog.Repository;
 
 public class JogApplication extends Application {
 

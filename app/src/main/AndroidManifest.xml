@@ -16,17 +16,17 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".TrackJogActivity">
+        <activity android:name=".HomeActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".JogMapActivity">
-
-        </activity>
-        <service android:name=".LocationService" />
+        <activity android:name=".jog.JogActivity"></activity>
+        <activity android:name=".log.JogMapActivity"></activity>
+        <activity android:name=".log.LogActivity"></activity>
+        <service android:name=".jog.LocationService" />
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
