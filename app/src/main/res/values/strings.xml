@@ -8,4 +8,6 @@
     <string name="view_map">View Map</string>
     <string name="jog_button_name">Jog</string>
     <string name="log_button_name">Log</string>
+    <string name="rand_button_name">Random</string>
+    <string name="start_gen_name">Generate</string>
 </resources>
